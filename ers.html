@@ -1,0 +1,808 @@
+<HTML>
+ <HEAD>
+  <TITLE>rt-stepper ERS</TITLE>
+ </HEAD>
+ <BODY BGCOLOR="#FFFFFF">
+ <font face="Arial">
+<center>
+  <h1>rt-stepper</h1>
+  <h4>with EMC2</h4>
+  <h3>External Reference Specification (ERS)</h3>
+ </center>
+
+  <h2>Table of contents</h2>
+<ul>
+<li><a href="#purpose">1 Purpose</a>
+<li><a href="#intro">2 Introduction</a>
+<ul>
+<li><a href="#requirements">2.1 Requirements</a>
+<li><a href="#goals">2.2 Design Goals</a>
+<li><a href="#license">2.3 License</a>
+</ul>
+<li><a href="#solution">3 Solution</a>
+<li><a href="#overview">4 Overview</a>
+<li><a href="#codes">5 CNC Program Codes</a>
+<li><a href="#configuration">6 Configuration File</a>
+<ul>
+<li><a href="#emc_section">6.1 EMC section</a>
+<li><a href="#display_section">6.2 DISPLAY section</a>
+<li><a href="#traj_section">6.3 TRAJ section</a>
+<li><a href="#axis_section">6.4 AXIS section</a>
+<li><a href="#task_section">6.5 TASK section</a>
+</ul>
+<li><a href="#screens">7 Screens</a>
+<li><a href="#error">8 Error logging</a>
+<li><a href="#depend">9 Dependencies</a>
+<li><a href="#support">10 OS Support</a>
+<li><a href="#build">11 Software Installation</a>
+<ul>
+<li><a href="#binaryWin">11.1 Windows Install</a>
+<li><a href="#binaryLinux">11.2 Linux Install</a>
+<li><a href="#binaryMac">11.3 Mac OSX Install</a>
+<li><a href="#source">11.4 Source Code Install</a>
+</ul>
+<li><a href="#power">12 Power Up</a>
+<li><a href="#test">13 Testing</a>
+<li><a href="#tuning">14 Tuning</a>
+<li><a href="#switches">15 Limit Switches</a>
+<li><a href="#python">16 Python Scripts</a>
+<li><a href="#homing">17 Homing</a>
+<li><a href="#db25">18 DB25 Connector</a>
+<li><a href="#cam">19 CNC/CAD/CAM Support</a>
+<li><a href="#lib">20 Third-party Support</a>
+<li><a href="#spec">21 Specifications</a>
+</ul>
+
+<H2><a name="purpose"></a>1 Purpose</H2>
+The purpose of this document is to present a description of what the <i>rt-stepper</i> product is and how it is used. This description is intended to define what the product controls, human interface, machine interface and how to use the product. 
+<p>
+This document is provided "AS IS" without warranties of any kind including warranties of merchantability, fitness for a particular purpose, or non-infringement of intellectual property.
+<p>
+
+<H2><a name="intro"></a>2 Introduction</H2>
+The <i>rt-stepper</i> USB-to-Parallel dongle is a special dongle designed specifically for CNC controllers. This dongle provides CNC parallel port support and real time stepper motor control. You can use this dongle to convert a parallel port CNC controller into a USB CNC controller.
+<p>
+Most CNC controllers are designed to be driven with a PC parallel port. Unfortunately parallel ports are a thing of the past and many new PCs have no parallel port. Commercial USB-to-Parallel dongles do exist, but these dongles are designed for printers not CNC controllers. CNC controllers require XYZ step/direction signals. With the <i>rt-stepper</i> dongle you can now drive XYZ step/direction signals over the USB bus.
+<p>
+The original <i>rt-stepper</i> software was a small terminal program that ran a small subset of CNC gcodes.
+This software was open source similar to the EMC2 open source project at <a href="http://www.linuxcnc.org">www.linuxcnc.org</a>. Both projects are separate PC applications that interpret gcode and drive CNC controllers. Instead of re-inventing another gcode interpreter the <i>rt-stepper</i> software is now based on the EMC2 software from <a href="http://www.linuxcnc.org">www.linuxcnc.org</a>. This provides a number of improvements over the original <i>rt-stepper</i> software - 4-axis support, complete gcode interpreter, trajectory planner, GUI front-end and Backploting. 
+<p>
+Note through out the rest of this document the term "EMC2" and "EMC2 software" refers to software from the EMC2 project at <a href="http://www.linuxcnc.org">www.linuxcnc.org</a> that is now used in the <i>rt-stepper</i> software project. Both projects have separate code bases and create separate executables or binaries.
+<p>
+Since the <i>rt-stepper</i> dongle provides the real time step pulse generator this version of EMC2 has been re-factored. The EMC2 real time component has been removed. There are no kernel modules or real time kernel patch dependencies. This allows EMC2 (rtstepperemc) to run on Linux, Mac or Windows. 
+<p> 
+For those familiar with EMC2 some functionality was dropped. USB devices are different from parallel port devices. Basically the <i>rt-stepper</i> dongle must be treated as a buffered device in order take advantage of USB bus speed. You cannot control the device one-byte-at-time like a parallel port and expect guaranteed speed. This means a different approach must be used for USB. Step buffers must be created with known distances and trajectories before being sent over-the-wire. EMC2 code for continuous jogging, homing or probing must be re-factored or dropped. As a result only incremental jogging is supported and homing is now done via python scripts.  
+<p>
+HAL has been removed. All configuration options are done via a *.ini file. The rcslib library dependency has been removed.
+<p>
+The <i>rt-stepper</i> software is an open source project available at <a href="http://ecklersoft.com">www.ecklersoft.com</a>. 
+
+<H3><a name="requirements"></a>2.1 Requirements</H3>
+<i>rt-stepper</i> was created to satisfy the following requirements.
+<ul>
+<li> Support USB only PCs
+<li> Support existing parallel port only CNC controllers
+<li> Work with standard OSs, no real-time kernel required
+<li> Support Linux, Mac and Windows
+<li> Fast, reliable, minimalist system
+<li> Event driven, multithreaded
+<li> Support third-party applications
+</ul>
+<H3><a name="goals"></a>2.2 Design Goals</H3>
+<p>
+<i>rt-stepper</i> software will be based on software from the EMC2 project at <a href="http://www.linuxcnc.org">www.linuxcnc.org</a>.
+<p> 
+The GUI will be similar to the existing EMC2 mini.tcl GUI. 
+<p>
+Since the <i>rt-stepper</i> software is a single process multi-threaded design, the NML messaging protocol is not longer used.
+<p>
+Any EMC2 dependency on the rcslib from <a href="http://www.isd.mel.nist.gov/projects/rcslib">www.isd.mel.nist.gov/projects/rcslib</a> has been removed.
+<p>
+Only USB IO will be supported. Parallel port support will be provided via the <i>rt-stepper</i> USB-to-parallel dongle.
+<p>
+All USB IO will be based on libusb. <i>rt-stepper</i> is designed to be used by Linux, but other OSs that support libusb will also work. 
+<p>
+The <i>rt-stepper</i> software will be open source, but the dongle will be sold as a product.
+<p>
+GNU software tools will be used to build the source code. This includes an ANSI C compiler and POSIX compliant environment.
+<p>
+The tar ball will have built-in binary package support.
+<p>
+Device permissions and user policies should be settable independently by administrators and distributions.
+<p>
+The dongle will have IO support for 8-bit output and 3-bit input. Both output and input are supported by the <i>rt-stepper</i> software.
+<p>
+The dongle 8-bit output will be configurable for axis support or general digital output.
+<p>
+Spindle and coolant mcodes will be implemented via python scripts.
+<p>
+All user-defined mcodes will be implemented via python scripts.
+<p>
+Homing will be performed with a user-defined mcode.
+<p>
+
+<H3><a name="license"></a>2.3 License</H3>
+The <i>rt-stepper</i> software that runs on the PC is covered by the <a href="http://www.gnu.org/licenses/gpl-2.0.txt">GNU GPL 2.0 license</a>.
+<p>
+Simply stated the GNU GPL license does allow the following.
+
+<ul>
+<li> Use the <i>rt-stepper</i> software at no charge.
+<li> Distribute verbatim copies of the software in source or binary form.
+<li> Sell verbatim copies of the software for a media fee or sell support for the software.
+</ul>
+What this license does NOT allow you to do is make changes or add features to <i>rt-stepper</i> software and then sell a binary distribution without source code. You must provide source code for any changes, or additions to the software and all code must be provided under the GPL or LGPL as appropriate.
+
+<H2><a name="solution"></a>3 Solution</H2>
+<center>
+<IMG SRC="dongle.jpg">
+</center>
+
+<H2><a name="overview"></a>4 Overview</H2>
+<i>rt-stepper</i> consists of PC software and USB-to-parallel dongle. The dongle's USB connector connects to the PC. The dongle's DB25 connector connects to the parallel port of the CNC controller. 
+<p>
+The <i>rt-stepper</i> software is based on the EMC2 open source project at <a href="http://www.linuxcnc.org">www.linuxcnc.org</a>. Note both projects are seperate software applications and the dongle will only run 
+on the <i>rt-stepper</i> software. With the <i>rt-stepper</i> software there is only one process that runs on the PC - TkMini. TkMini is a GUI front-end program that communicates directly to the dongle. This single process performs the gcode translation, trajectory planning and <i>rt-stepper</i> IO. TkMini generates the step pulses, but step timing is maintained by dongle thus eliminating the need for a real time kernel. 
+<p>
+The software will interpret the gcode file, covert the gcode instructions into a series of step buffers. Each step buffer is sent over the USB 1.1 bus to the dongle. The dongle then clocks each step byte out over the parallel port at precise step intervals. Each step byte drives the step/direction pins on the CNC controller parallel port. 
+<p>
+Both manual and auto CNC operations are supported by the software.
+
+<H2><a name="codes"></a>5 CNC Program Codes</H2>
+The <i>rt-stepper</i> software supports the same gcode interpreter as EMC2. 
+See the "Gcode Overview" section at  <a href="http://www.linuxcnc.org">www.linuxcnc.org</a> for 
+program syntax, parameters, expressions, binary operators, functions and looping constructs.
+<p>
+Mcodes are handled differently the <i>rt-stepper</i> software. Most mcodes are now implemented with python scripts.  
+This means spindle, coolant and homing are now executed via python scripts.
+Tool Change codes are currently ignored.
+<p>
+<b>Notes on some codes:</b>
+<p>
+Perfect circles can be made with the circular interpolation codes G02 or G03 using the R radius word. Generally this is done with two commands, one command for each half of the circle. Here is an gcode example that cuts a one inch circle at the origin.
+
+<pre>
+G0 X0.5                    (rapid to 0 degree point on circle)
+G1 Z-0.035 F6              (plunge)
+G3 X-0.5 Y0 R0.5 F6        (cut arc to 180 degree point on circle)
+G3 X0.5 Y0 R0.5 F6         (cut arc to 0 degree point on circle)
+</pre> 
+
+Of coarse in this example a perfect circle will require accurate XY backlash values in the ini file. I repeat perfect circles require accurate backlash values!
+
+<H2><a name="configuration"></a>6 Configuration File</H2>
+A configuration file will be used to set <i>rt-stepper</i> runtime options. By default the rtstepper.ini file is used as the configuration file. You can also
+specify a custom ini file on the TkMini command line. Be sure to specify the full path to the custom ini file or TkMini may not find it.
+
+<pre>
+tkmini -ini rtstepper.ini
+</pre>
+
+<p>
+The ini file is a simple ASCII text file that must be customized for each unique CNC controller. Use any text editor to customize the ini file. Multiple ini files can be used for different CNC controllers.
+<p>
+The ini file is divided into different sections and key/value pairs. Sections are defined by brackets "[ ]" and key/value pairs are defined by the "=" character. Comment lines start with the "#" character.
+<p>
+Different digital output configurations can be defined in the ini file. DB25 pins 2-9 can be assigned to different output signals.
+The following examples show how 8 digital outputs can be configured for different CNC applications.
+<center>
+<img src="output_pins.png">
+</center>
+<p>
+
+The rest of this section define some common configuration options and their default values. Generally only these options need to be modified by the user.
+<p>
+<H3><a name="emc_section"></a>6.1 EMC section</H3>
+<pre>
+[EMC]
+MACHINE = TkMini (rtstepper.ini)
+</pre>
+Sets the title in the UI application. Useful for identifying what ini file is loaded.
+
+<H3><a name="display_section"></a>6.2 DISPLAY section</H3>
+<pre>
+[DISPLAY]
+PROGRAM_PREFIX = /etc/rtstepperemc
+</pre>
+Sets the default path to gcode and mcode files.  
+
+<H3><a name="traj_section"></a>6.3 TRAJ section</H3>
+<pre>
+[TRAJ]
+DEFAULT_VELOCITY =      0.2
+MAX_VELOCITY =         400
+DEFAULT_ACCELERATION =  200
+MAX_ACCELERATION =      400
+</pre>
+
+Sets the trajectory planner default velocity and acceleration in engineering units. 
+In the above example this would be 0.2 inches/second or 12 inches/minute (12 = 0.2 * 60).
+This sets the trajectory planner overall acceleration and velocity then each axis can be fine tuned individually in
+the AXIS section.
+
+<H3><a name="axis_section"></a>6.4 AXIS section</H3>
+<pre>
+[AXIX_n]
+MAX_VELOCITY = 0.15
+BACKLASH = 0.0
+INPUT_SCALE = 32000
+STEP_PIN = 2
+DIRECTION_PIN = 3
+STEP_ACTIVE_HIGH = 0
+DIRECTION_ACTIVE_HIGH = 0
+</pre>
+
+There is a AXIS section for each axis (AXIS_0 - AXIS_3). 
+<p>
+MAX_VELOCITY specifies the max velocity for this axis. In the example this would be 0.15 inches/second. 
+<p>
+BACKLASH is the amount of backlash or "play" in your XYZ lead screw. Start with zero then after tuning your CNC system, measure your backlash and enter the values here. Note, backlash compensation is a poor substitute for good lead screws. Excessive backlash can "throw" the table, causing inaccurate cuts and or broken tool.
+<p>
+INPUT_SCALE define the stepper motor steps/inch for this axis. This is a function of your motor, lead screw and CNC controller. Metric values can be used here instead of inch.
+<p>
+Here are some notes on how to calculate the INPUT_SCALE for a Sherline mill using the using a Xylotex 3-axis CNC controller and 269 oz.in steppers. 
+<pre>
+1.8 = degrees/step
+360 / 1.8 = 200 steps/revolution
+.050 = one revolution of the lead screw
+200 / .050 = 4000 steps/inch full steps
+
+Since the Xylotex CNC controller board is set to 1/8 stepping.
+
+4000 * 8 = 32000 steps/inch = INPUT_SCALE
+</pre>
+<p>
+STEP_PIN specifies the step pin on the DB25 connector for this axis.
+<p>
+DIRECTION_PIN specifies the direction pin on the DB25 connector for this axis.
+<p>
+STEP_ACTIVE_HIGH specifies the polarity of the step signal (0 = active_low, 1 = active_high).
+<p>
+DIRECTION_ACTIVE_HIGH specifies the polarity of the direction signal (0 = active_low, 1 = active_high).
+<p>
+The default values for step/direction pins will work for many commercial CNC controller boards. 
+Note, the dongle supports 8 digital output signals on DB25 connector pins 2, 3, 4, 5, 6, 7, 8 and 9.
+Your CNC controller MUST be built to use these pins, most commercial boards are. 
+<p>
+
+<H3><a name="task_section"></a>6.5 TASK section</H3>
+<pre>
+[TASK]
+INPUT0_ABORT = 0
+INPUT1_ABORT = 0
+INPUT2_ABORT = 0
+</pre>
+Use the "INPUTx_ABORT" option to automatically trigger a un-synchronized estop. 
+Any "INPUTx_ABORT" option can be used to enable a estop. 
+Generally the input signals are used for limit switches.
+See the <a href="#switches">Limit Switches</a> section for wiring details.
+<p>
+When "INPUTx_ABORT=0" the INPUTx signal is ignored. This is the default.
+<p>
+When "INPUTx_ABORT=1" an "active high" transition on the INPUTx pin will cause a un-synchronized estop.
+<p>
+<pre>
+OUTPUT0_PIN = 0
+OUTPUT1_PIN = 0
+OUTPUT2_PIN = 0
+OUTPUT3_PIN = 0
+OUTPUT4_PIN = 0
+OUTPUT5_PIN = 0
+OUTPUT6_PIN = 0
+OUTPUT7_PIN = 0
+</pre>
+Use the "OUTPUTx_PIN" option to enable a general digital output signal. 
+The signal can be used for turning spindle or coolant on/off. 
+Each "OUTPUTx_PIN" specifies a DB25 pin number.
+<b>IMPORT!!</b> The pin number <b>MUST</b> be an unused axis step/direction pin.
+This means the same pin number can <b>NOT</b> be used in [AXIS_n] section.
+<p>
+When "OUTPUTx_PIN" = 0 the OUTPUTx signal is unused. This is the default.
+
+<H2><a name="screens"></a>7 Screens</H2>
+<center>
+<IMG SRC="mini_linux.png">
+</center>
+<p>
+The above screen is an example of TkMini running on Linux. The Backplot example shows the CNC path used to create the dongle case.
+<p>
+<center>
+<IMG SRC="mini_xp_full.png">
+</center>
+<p>
+The above screen an example of TkMini running on Windows XP. The Backplot example shows a 3D view of the CNC path used to create the dongle PCB.
+<p>
+<center>
+<IMG SRC="mini_osx_full.png">
+</center>
+<p>
+The above screen an example of TkMini running on Mac OSX 10.6. The Backplot example shows a 2D XY view of the CNC path used to create the dongle PCB.
+<p>  
+<H2><a name="error"></a>8 Error logging</H2>
+Any errors during <i>rt-stepper</i> program execution are written to a local milltask.log file.   
+The log file will always have more specific error information than the TkMini display.
+Use a text editor to view the log file.
+<p>
+The log file is automatically created in the user home directory.
+For example the log file for Linux and OSX would be "~/.rtstepperemc/milltask.log". 
+For Windows it would be "c:\Documents and setting\usr_name\.rtstepperemc\milltask.log".
+Error logging is always enabled and should be referenced before asking for help.
+<p>
+
+<H2><a name="depend"></a>9 Dependencies</H2>
+<ul>
+<li> Software build requirements
+<ul>
+<li> GNU software tools, this includes the ANSI C compiler and POSIX compliant environment
+<li> libusb-devel 0.1.10a or higher
+</ul>
+<li> Runtime requirements
+<ul>
+<li> libusb 0.1.10a or higher
+<li> ncurses
+<li> pthread
+<li> tcl/tk
+</ul>
+</ul>
+<H2><a name="support"></a>10 OS Support</H2>
+<i>rt-stepper</i> is designed to be used by Linux, Mac and Windows.
+All though not a complete list the following OSs have be tested.
+<ul>
+<li> Fedora 13
+<li> Ubuntu 10.04
+<li> Ubuntu 12.04
+<li> MacBook Intel OSX 10.6.4
+<li> Windows XP
+<li> Windows 7
+</ul>
+
+<H2><a name="build"></a>11 Software Installation</H2>
+The best way to install the <i>rt-stepper</i> software is with a pre-build binary package. Pre-build binary packages are available at  <a href="http://www.ecklersoft.com/download.shtml">www.ecklersoft.com/download</a>. Installing from source code is an option, but should only be attempted by an experienced programmer or administrator.
+
+<p>
+<H3><a name="binaryWin"></a>11.1 Windows Install</a></H3>
+For Windows use the following steps to install <i>rt-stepper</i>. The instructions have been tested on Windows XP. Instructions for Windows 7 would be similar.  
+<ol>
+<li> Download and install the 32-bit ActiveTcl 8.5 for Windows (ie: ActiveTcl 8.5.x.x) at www.activestate.com. Do not use ActiveTcl 8.6 or higher.
+</li>
+<li> Download the latest rtstepperemc_win32 zip file from <a href="http://www.ecklersoft.com/download.shtml">www.ecklersoft.com/download</a>. The following 
+screen shot shows the zip file stored in the top directory of your C: drive.
+
+<center>
+<img src="zip_download.png">
+</center>
+<p>
+</li>
+<li> Unzip rtstepperemc_win32 by right clicking on the zip file, then click on "Extract All...".
+<center>
+<img src="extract.png">
+</center>
+<p>
+</li>
+</li>
+<li> With the Extraction Wizard click the Next button.
+<center>
+<img src="wizard1.png">
+</center>
+<p>
+</li>
+<li> Using the default destination directory click on the Next button.
+<center>
+<img src="wizard2.png">
+</center>
+<p>
+</li>
+<li> After the extraction is complete, you can un-click "Show extracted files", then click Finish.
+<center>
+<img src="wizard3.png">
+</center>
+<p>
+</li>
+<li> At this point you should be able to run "tkmini.tcl" by double clicking on it. This should start TkMini application.
+<center>
+<img src="unziped.png">
+</center>
+<p>
+</li>
+<li> With no dongle plugged in, TkMini should have displayed the message "unable to connect to the rt-stepper dongle".
+You can go ahead and exit out of TkMini for now. 
+<center>
+<img src="unpluged.png">
+</center>
+</li>
+<p>
+<li>
+Now it is time to install the rt-stepper USB driver. Plug-in a USB cable from the PC to the rt-stepper dongle. 
+This should pop up the "Found New Hardware Wizard".
+We want to manually select our own driver so select "No, not this time", then click Next. 
+<center>
+<img src="new_hardware.png">
+</center>
+<p>
+</li>
+<li>Select "Install from a list or specific location", the click Next.
+<center>
+<img src="new_hardware2.png">
+</center>
+<p>
+</li>
+<li>Make the selections as shown in the following screen shot, using the Browse button select the directory you created after unziping the zip file in step 7. In the example the directory was "c:\rtstepperemc_win32-1.8-0\rtstepperemc_win32-1.8-0". Now click Next.
+<center>
+<img src="new_hardware3.png">
+</center>
+<p>
+</li>
+<li>Ignore the following "not passed Windows Logo testing" message and continue with the installation by clicking Continue Anyway.
+<center>
+<img src="new_hardware4.png">
+</center>
+<p>
+</li>
+<li>Once the driver is installed you should get the following completion dialog, click the Finish button.
+<center>
+<img src="new_hardware6.png">
+</center>
+<p>
+</li>
+<li> Disable any power save options that will cause the PC to shutdown during CNC operation.
+</li>
+<li> Now you can re-run step 7 and there should now be no "unable to connect to the rt-stepper dongle" message.
+</li>
+<li> You are now ready to proceed with the <a href="#power">Power Up</a> section.
+</li>
+</ol>
+
+<p>
+<H3><a name="binaryLinux"></a>11.2 Linux Install</a></H3>
+For Linux use the following instructions to install <i>rt-stepper</i>. The instructions have been tested on Fedora and Ubuntu.
+<ol>
+<li> Download the latest <i>rt-stepper</i> rpm or deb package from <a href="http://www.ecklersoft.com/download.shtml">www.ecklersoft.com/download</a>.
+</li>
+<li> Install the binary package. Note the software version number will be the same or higher.
+<pre>
+for Fedora:
+rpm -ivh rtstepperemc-1.7.1-0-x86_32.rpm
+
+for Ubuntu:
+dpkg -i rtstepperemc-1.7.1-0-x86_32.deb
+</pre>
+</li>
+<li> At this point you should be able to run "tkmini" from the command line. This should start the TkMini application.
+</li>
+<li> With no dongle plugged in, TkMini should have displayed the message "unable to connect to the rt-stepper dongle". You can go ahead and exit out of TkMini for now.
+</li>
+<li> Plug-in a USB cable from the PC to the rt-stepper dongle.
+</li>
+<li> Disable any power save options that will cause the PC to shutdown during CNC operation.
+</li>
+<li> Now you can run "tkmini" and there should be no "unable to connect to the rt-stepper dongle" message.
+</li>
+<li> You are now ready to proceed with the <a href="#power">Power Up</a> section.
+</li>
+</ol>
+
+<H3><a name="binaryMac"></a>11.3 Mac OSX Install</a></H3>
+For Mac OSX use the following instructions to install <i>rt-stepper</i>. The instructions have been tested on OSX 10.6.
+<ol>
+<li> Download the latest <i>rt-stepper</i> dmg disk image from <a href="http://www.ecklersoft.com/download.shtml">www.ecklersoft.com/download</a>. Note the disk image software version number will be the same or higher.
+</li>
+<li> Double clicking on the dmg file will automatically mount and popup the following file folder screen. You can use the icons from the disk image or you can drag-and-drop them into a folder on your hard drive. In order to modify the rtstepper.ini file you must drag-and-drop all four icons into a folder on your hard drive.
+<center>
+<IMG SRC="bundle.png">
+</center>
+</li>
+<li> At this point you can run "tkmini" by clicking on the icon.
+</li>
+<li> With no dongle plugged in, TkMini should have displayed the message "unable to connect to the rt-stepper dongle". You can go ahead and exit out of TkMini for now.
+</li>
+<li> Plug-in a USB cable from the PC to the rt-stepper dongle.
+</li>
+<li> Disable any power save options that will cause the PC to shutdown during CNC operation.
+</li>
+<li> Now you can run "tkmini" and there should be no "unable to connect to the rt-stepper dongle" message.
+</li>
+<li> You are now ready to proceed with the <a href="#power">Power Up</a> section.
+</li>
+</ol>
+
+<H3><a name="source"></a>11.4 Source Code Install</a></H3>
+
+Use this section as a reference for building and installing <i>rt-stepper</i> from source code. WARNING the instructions may not be complete and vary by OS and release. 
+There are a few build time dependencies that are needed in order to build a binary from source code. An experienced programmer should have no problem 
+building from source code since many of the original EMC2 dependencies have been removed.
+<p>
+For Linux use the following steps to build and install <i>rt-stepper</i>. 
+<ol>
+<li> Download and untar the latest <i>rt-stepper</i> tar ball. 
+</li>
+<li> In the <i>rt-stepper</i> directory build and install <i>rt-stepper</i>.
+<pre>
+./configure
+make
+make install
+</pre>
+</li>
+<li> At this point you can follow the Linux install instructions in the previous Binary Install section.
+</li>
+</ol>
+
+For Mac OSX 1.6 use the following steps to build and install <i>rt-stepper</i>.
+<ol>
+<li> Download install xcode to get the GNU tools.
+</li>
+<li> Download install darwinports at darwinports.org/getdp.
+</li>
+<li> Install libusb.
+<pre>
+sudo port install libusb-legacy
+</pre>
+</li>
+<li> Install gettext.
+<pre>
+sudo port install gettext.
+</pre>
+</li>
+<li> Download and untar the latest <i>rt-stepper</i> tar ball. 
+</li>
+<li> In the <i>rt-stepper</i> directory build and install <i>rt-stepper</i>.
+<pre>
+./configure --prefix=/opt/local LDFLAGS="-L/opt/local/lib -L/opt/local/lib/libusb-legacy" CFLAGS="-I/opt/local/include -I/opt/local/include/libusb-legacy" CXXFLAGS="-I/opt/local/include -I/opt/local/include/libusb-legacy"
+make
+make dmg
+</pre>
+</li>
+<li> At this point you can follow the Mac OSX install instructions in the previous Binary Install section.
+</li>
+</ol>
+
+Building and installing for Windows XP is a two step process. First build a win32 <i>rt-stepper</i> zip package on Fedora 13 then install the package on Windows.
+After installing <i>rt-stepper</i> can be run totally from the zip directory.
+The following steps outline this procedure. 
+
+<ol>
+<li> On Fedora 13 install mingw. Mingw is a win32 cross-compiler tool chain. More information about mingw is available at <a href="http://www.mingw.org/">www.mingw.org</a>.
+<pre>
+yum install mingw32-*
+</pre>
+</li>
+<li> Copy the following libusb-winusb files to the mingw32 directories. Libusb-winusb is based on Microsoft's winusb user mode driver. The libusb-winusb files are available in the binary download. 
+<pre>
+cp libusb-winusb.a /usr/i686-pc-mingw32/sys-root/mingw/lib/
+cp usb.h /usr/i686-pc-mingw32/sys-root/mingw/include/
+cp libusb-winusb.dll /usr/i686-pc-mingw32/sys-root/mingw/bin/
+</pre>
+</li>
+<li> Download and untar the latest <i>rt-stepper</i> tar ball. 
+</li>
+<li> In the <i>rt-stepper</i> directory build the <i>rt-stepper</i> zip package.
+<pre>
+./configure --host i686-pc-mingw32
+make
+make zip
+</pre>
+</li>
+<li> Now transfer the <i>rt-stepper</i> zip package to the Windows XP PC.
+</li>
+<li> Choose a directory location to run the <i>rt-stepper</i> program(s) from. Unzip the <i>rt-stepper</i> package into this directory. 
+</li>
+<li> For TkMini download and install the 32-bit ActiveTcl 8.5 for Windows (ie: ActiveTcl 8.5.x.x) at www.activestate.com. Do not use ActiveTcl 8.6 or higher. 
+</li>
+<li> Plug-in a USB cable from the PC to the <i>rt-stepper</i> dongle.  
+</li>
+<li> When Windows asks for a new hardware driver, manually choose the rt-stepper.inf file. Ignore any not "digitally signed" messages and continue with the installation.
+</li>
+<li> Windows should now recognize the dongle's USB device vid, pid and serial number at plug-and-play time.
+</li>
+<li> Disable any power save options that will cause the PC to shutdown during CNC operation. 
+</li>
+<li> <i>rt-stepper</i> is now ready to run. Run "tkmini.tcl" from the zip directory.
+</li></ol>
+
+<H2><a name="power"></a>12 Power Up</H2>
+
+The <i>rt-stepper</i> dongle is powered from the USB bus on the PC, no external power supply is required. Since the CNC controller has a separate power supply the following power up sequence must be used.
+
+<ol>
+<li> Power up the PC.
+<li> If not already connected, plug the dongle into the PC via the USB cable. 
+<li> After the kernel enumerates the USB device check the dongle's green LED.
+<pre>
+The LED should be on solid (no blinking). 
+</pre>
+<li> Power up the CNC controller.
+</ol>
+
+Use the reverse order for the power down sequence. 
+
+<H2><a name="test"></a>13 Testing</H2>
+
+Before we can start CNC stepping the motors we must verify the USB subsystem with the <i>rt-test</i> program. <i>rt-test</i> is part of the <i>rt-stepper</i> package.
+<p> 
+<font color=red>IMPORT!! The <i>rt-test</i> program must be performed with no CNC controller connected to the dongle.</font>
+<p>
+<i>rt-test</i> will verify that your USB subsystem on your PC can drive the <i>rt-stepper</i> dongle. Run "rt-test" from the command line and
+the following checks will be made.
+
+<ol>
+<li> USB device enumeration.
+<li> Device permissions.
+<li> Start a 65K byte bulk write transfer.
+<li> Wait for transfer complete.
+<li> Print pass or fail.
+</ol>
+
+Run <i>rt-test</i> several times, if <i>rt-test</i> passes every time proceed to the Tuning section.
+
+<H2><a name="tuning"></a>14 Tuning</H2>
+
+Note if your CNC system matches a pre-configured <i>rt-stepper</i> *.ini file, then this tuning procedure may not be
+necessary. See the sample *.ini files at <a href="http://www.ecklersoft.com/download.shtml">www.ecklersoft.com/download</a>.
+<p>
+Before we can cut any real parts we must tune <i>rt-stepper</i> with the CNC system. 
+At this point the INPUT_SCALE values, see the Configuration File section, should be correct for your CNC controller.
+<p>
+Since <i>rt-stepper</i> has it's own real-time clock, tuning is very simple. 
+All we have to determine is the MAX_VELOCITY for each axis on the CNC system. Then update the ini file with the new values. 
+<p>
+The MAX_VELOCITY is the max speed the stepper motors can operate at. Stepper motors will go out of sync if they are accelerated or decelerated too suddenly. 
+This is because the magnetic fields are advancing faster than the rotor can keep up. 
+Once a motor is out of synchronization further CNC stepping is useless as the position of that axis has been lost. 
+<p>
+For tuning purposes the measured MAX_VELOCITY should be less than the current MAX_VELOCITY values in the ini file. The initial values in the default
+ini file should be a good starting point for tuning.
+<p>
+The MAX_VELOCITY is a very important control variable and can be used for the following functions.
+<ol>
+<li> Set rapid limit in TkMini.
+<li> Set the max feed rate in the gcode file.
+</ol>
+
+MAX_VELOCITY must be measured for each axis.
+Here is the procedure for measuring each axis.
+<ol>
+<li> Run TkMini.
+<li> Set the default max velocity by clicking the Rapid button.
+<li> Jog the axis 1 inch.
+<li> If the motor chatters or does not move at all reduce Speed with the slider and repeat step 1.
+<li> Measure the distance moved, if not 1 inch reduce Speed and repeat step 1.
+<li> Done, the resulting Speed is your measured MAX_VELOCITY, set MAX_VELOCITY = (Speed / 60) in the ini file. 
+</ol>
+
+Generally the measured MAX_VELOCITY is a function of your CNC controller board and stepper motors not <i>rt-stepper</i>. If your measured MAX_VELOCITY is not acceptable try reducing your steps/inch on your controller board. If you change your steps/inch remember to change the INPUT_SCALE in the ini file.
+<p> 
+When tuning is complete you are ready to start cutting parts. 
+
+<H2><a name="switches"></a>15 Limit Switches</H2>
+Depending on the CNC system limit switches are optional. If exceeding the XYZ physical limits can cause physical damage to your CNC system then limit switches are NOT optional.
+<p>
+The <i>rt-stepper</i> dongle supports three "active high" input signals called INPUT0, INPUT1 and INPUT2. 
+Although any of the three input signals can be used for limit switches, the following example uses INPUT0.  
+INPUT0 signal is hard wired to the DB25 connector pin 10. 
+Multiple switches are wired in-series as normally closed switches connected to CNC ground. 
+
+<center>
+<img src="input_pins.png">
+</center>
+<p>
+This configuration frees up INPUT1-2 for other uses and provides simple in-series cable wiring. 
+Note, "active high" digital input signals means broken wires will be detected immediately.
+<p>
+INPUT0-2 have a internal pull up resistors so no external power or pull up resistor is required. 
+INPUT0-2 use a Schmitt Trigger input buffer for noise immunity, but care should still be taken with the switch wiring. Do NOT route switch wires near power wires.
+<p>
+INPUT0-2 can be used to signal an un-synchronized estop of the current CNC controller move. This functionality can be enabled via the ini file.
+See the <a href="#task_section">"INPUTx_ABORT"</a> option in the Configuration File section. 
+<p>
+Note the "input0-2_abort" option has a small amount of software overhead so the abort sequence in not immediate. 
+Depending on how fast your PC is, some extra steps may be executed after a switch has been tripped. 
+The number of extra steps will be feed rate dependent. Switches should be chosen that can handle any extra steps without being damaged.
+
+<H2><a name="python"></a>16 Python Scripts</H2>
+Starting with rtstepperemc release 2.0 most mcodes are now supported via python scripts. 
+The python interpreter comes from the tinypy project at <a href="http://www.tinypy.org">www.tinypy.org</a> and is built into the rtstepperemc library. 
+Tinypy is a minimalist implementation of python. Python is a simple programming language that allow users to make their own custom changes without having to recompile the software.
+<p>
+What can you do with python a script? Scripts can perform the same functions as the GUI (tkmini) provides in Manual mode. This includes jogging, spindle on/off and coolant on/off.
+A good python script example that exercises most functionality is the homing script m190.py. 
+<p>
+Python scripts that execute spindle and coolant mcodes are included with the rtstepperemc software. Users can specify in the python script which digital output signal will be used. 
+Here is the python script file for turning the spindle on.
+<pre>
+#
+# m3.py - m3 mcode script turns spindle on clockwise.
+# 
+# inputs:
+#  path = ARGV[0]   # this python file name
+#  rpm  = ARGV[1]   # S parameter (spindle speed)
+#
+# returns:
+#  emc.h result code
+#
+# example:
+#  m3 s250.0
+#
+import rtstepper
+
+def main():
+    return rtstepper.dout(rtstepper.OUTPUT6, True)
+
+return main()
+</pre>
+<p>
+This script will set the digital output bit OUTPUT6 true. The DB25 pin assignment for OUTPUT6 would be defined in the ini file. 
+See the <a href="#task_section">"OUTPUTx_PIN"</a> option in the [TASK] section.
+A similar python script file (m5.py) would turn the spindle off.
+
+<H2><a name="homing"></a>17 Homing</H2>
+
+Homing is a process that moves an axis to a known position. Usually this is done with limit switches or in some cases separate homing switches. 
+Homing is especially useful when your CNC system has no dials on each axis. However, different machines have different requirements and homing can be quite complicated.
+<p>
+The rtstepperemc software supports homing with user-defined mcodes. User-defined mcodes are M100-199 and all user-defined mcodes are implemented via python scripts. 
+Included with the rtstepperemc software is an example python script file that implements the user-defined mcode M190 (m190.py).
+This is simple script file will home a specified axis. The user will need to customize the script for their CNC application.
+M190 can be executed as a MDI command or from a gcode file.
+
+<pre>
+M190 P0 Q0 (use INPUT0 for estop, home x-axis)
+M190 P0 Q1 (use INPUT0 for estop, home y-axis)
+M190 P0 Q2 (use INPUT0 for estop, home z-axis)
+</pre>
+The script was tested on a Sherline CNC system and proved to be very accurate using an optical switch. 
+Note, when running the script from a gcode file the M190 mcode cannot be executed inline because the estop will cancel the interp_list.
+
+<H2><a name="db25"></a>18 DB25 Connector</H2>
+This figure shows the <i>rt-stepper</i> dongle DB25 connector pin out.
+<center>
+<img src="db25.png">
+</center>
+
+<H2><a name="cam"></a>19 CNC/CAD/CAM Support</H2>
+All though not a complete list the following publicly available CAD/CAM packages and CNC controllers have be tested.
+<p>
+CAD/CAM support
+<ul>
+<li>EAGLE Version 5, <a href="http://www.cadsoft.de">CadSoft Computer, Inc</a>. works with <i>rt-stepper</i>. EAGLE is used for making the <i>rt-stepper</i> dongle PCB.
+<li><a href="http://ecklersoft.com/download/engrave-11-inline-1.tar.gz">engrave-11-inline</a>, original author Lawrence Glaister, upgraded for <i>rt-stepper</i>. 
+Used to engrave the <i>rt-stepper</i> dongle case.
+<li>CamBam <a href="http://www.cambam.co.uk">www.cambam.co.us</a>. 
+</ul> 
+CNC controller support
+<ul>
+<li>Xylotex 3-Axis Controller, <a href="http://www.xylotex.com">www.xylotex.com</a>. Used with Sherline 2000 Mill to build <i>rt-stepper</i> dongle cases. 
+<li>Camtronics 3-Axis 2A Controller (no longer sold), <a href="http://www.seanet.com/~dmauch">Camtronics Inc</a>. 
+Used with Sherline 5000 Mill plus 10,000RPM pulley to build dongle PCBs.
+</ul>
+
+<H2><a name="lib"></a>20 Third-party Support</H2>
+All the motion control software is in the rtstepperemc shared library. The current GUI is written in TCL/TK and makes calls to the library through a "C" API. 
+
+<center>
+<img src="stack.png">
+</center>
+
+One can replace the GUI in the software stack with a third-party or custom application.
+In the source code download there a simple "C" code example (pytest.c) that shows how to load the shared library
+and call the APIs. Pytest is a command line program that can be used to execute MDI commands and gcode files.
+
+<H2><a name="spec"></a>21 Specifications</H2>
+Step resolution: 46,875 hz<br> 
+Standards: USB V1.1, USB V2.0 Compliant<br>
+USB Speed: Full Speed (12 Mb/s)<br>
+VID: 0x04d8<br>
+PID: 0xff45<br> 
+Power: Bus Power Only (~5v)<br>
+Indicators: Power<br>
+Overall Dimensions: 2.6 in.(L) x 2.35 in.(W) x 0.95 in.(H)<br>
+Weight: 2.3 oz.
+<hr>
+<font size=2>
+<center>
+&#169 2009-2013 Eckler Software<br>
+<IMG SRC="sig.png"><br>
+Last updated September 10, 2013
+</center>
+</font>
+</font>
+ </BODY>
+</HTML>

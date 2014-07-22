@@ -1,0 +1,12 @@
+#! /bin/sh
+
+here=`pwd`
+
+set -x
+
+#libtoolize --force
+aclocal
+#automake --foreign --add-missing
+autoconf
+
+

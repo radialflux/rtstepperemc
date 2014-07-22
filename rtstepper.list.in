@@ -1,0 +1,89 @@
+# @configure_input@
+#
+#  ESP Package Manager (EPM) "list" file.
+#
+#  (c) 2009-2012 Copyright Eckler Software
+# 
+#  Author: David Suffield, dsuffiel@ecklersoft.com
+#
+
+$prefix=@prefix@
+$exec_prefix=@exec_prefix@
+$bindir=@bindir@
+$datarootdir=@datarootdir@
+$datadir=@datadir@
+$libdir=@libdir@
+$srcdir=@srcdir@
+$docdir=@datarootdir@/doc/@PACKAGE_NAME@-@PACKAGE_VERSION@
+$rulesdir=@rulesdir@
+$emcdir=@datarootdir@/@PACKAGE_NAME@
+$emcconfdir=/etc/@PACKAGE_NAME@
+$package=@PACKAGE_NAME@
+
+%product rtstepperemc
+%copyright (c) 2009-2012 Copyright Eckler Software
+%vendor Eckler Software
+%license ${srcdir}/COPYING
+%readme ${srcdir}/ers.html
+%version @PACKAGE_VERSION@
+%release @relnum@
+%description The rtstepperemc program along with it's USB-to-parallel dongle is a real time stepper motor gcode 
+%description virtual machine. The rtstepperemc software is based on the EMC2 project at linuxcnc.org. It uses
+%description the same gcode interpreter, trajectory planner, and GUI frontend. Manual, Auto, MDI and 
+%description Backplot CNC operations are supported.
+%description .
+%description Author: David Suffield, dsuffiel@ecklersoft.com
+%description http://www.ecklersoft.com
+
+$dll_version=2012-02-02
+
+#%format deb
+#%requires libusb-0.1-4
+#%requires libncurses5
+
+%format all
+
+f 0755 root root $bindir/rt-test ${srcdir}/rt-test
+
+%system linux
+f 0644 root root $rulesdir/55-rt-stepper.rules ${srcdir}/55-rt-stepper.rules
+%system all
+
+f 0644 root root $emcconfdir/rtstepper.ini ${srcdir}/rtstepper.ini
+f 0755 root root $emcconfdir/m3.py ${srcdir}/tinypy/m3.py
+f 0755 root root $emcconfdir/m4.py ${srcdir}/tinypy/m4.py
+f 0755 root root $emcconfdir/m5.py ${srcdir}/tinypy/m5.py
+f 0755 root root $emcconfdir/m7.py ${srcdir}/tinypy/m7.py
+f 0755 root root $emcconfdir/m8.py ${srcdir}/tinypy/m8.py
+f 0755 root root $emcconfdir/m9.py ${srcdir}/tinypy/m9.py
+f 0755 root root $emcconfdir/m190.py ${srcdir}/tinypy/m190.py
+
+f 0755 root root $emcdir/mini/mini.tcl ${srcdir}/mini/mini.tcl
+f 0755 root root $emcdir/mini/emc.tcl ${srcdir}/mini/emc.tcl
+l 0755 root root $bindir/tkmini ../share/${package}/mini/mini.tcl
+
+%system darwin
+f 0755 root root $emcdir/rtstepperemc.dylib ${srcdir}/rtstepperemc.dylib
+f 0555 root sys setup ${libdir}/epm/setup
+f 0555 root sys uninst ${libdir}/epm/uninst
+f 0444 root sys macosx/setup.icns ${datadir}/epm/setup.icns
+f 0444 root sys macosx/setup.info ${datadir}/epm/setup.info
+f 0444 root sys macosx/setup.plist ${datadir}/epm/setup.plist
+f 0444 root sys macosx/uninst.icns ${datadir}/epm/uninst.icns 
+f 0444 root sys macosx/uninst.info ${datadir}/epm/uninst.info 
+f 0444 root sys macosx/uninst.plist ${datadir}/epm/uninst.plist 
+%system !darwin
+f 0755 root root $emcdir/rtstepperemc.so ${srcdir}/rtstepperemc.so
+%system all
+
+%system linux
+%postinstall ldconfig
+%system all
+
+d 775 root root $docdir -
+f 644 root root $docdir/COPYING ${srcdir}/COPYING
+
+%provides rtstepperemc
+%provides rt-test
+
+

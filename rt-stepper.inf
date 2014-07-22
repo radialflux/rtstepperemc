@@ -1,0 +1,104 @@
+; Adapted from the example INF in the Microsoft document "How to Use WinUSB to Communicate with a USB Device"
+
+[Version]
+Signature = "$Windows NT$"
+Class = USB
+ClassGUID={36FC9E60-C465-11CF-8056-444553540000}
+Provider = %ProviderName%
+DriverVer=12/29/2009,1.4.0
+;CatalogFile=MyCatFile.cat
+
+; ========== Manufacturer/Models sections ===========
+
+[Manufacturer]
+%ProviderName% = MyDevice_WinUSB,NTx86,NTamd64
+
+[MyDevice_WinUSB.NTx86]
+%USB\MyDevice.DeviceDesc% =USB_Install, USB\VID_04d8&PID_ff45
+
+[MyDevice_WinUSB.NTamd64]
+%USB\MyDevice.DeviceDesc% =USB_Install, USB\VID_04d8&PID_ff45
+
+; =================== Installation ===================
+
+[USB_Install]
+Include=winusb.inf
+Needs=WINUSB.NT
+
+[USB_Install.Services]
+Include=winusb.inf
+AddService=WinUSB,0x00000002,WinUSB_ServiceInstall
+
+[WinUSB_ServiceInstall]
+DisplayName     = %WinUSB_SvcDesc%
+ServiceType     = 1
+StartType       = 3
+ErrorControl    = 1
+ServiceBinary   = %12%\WinUSB.sys
+
+[USB_Install.Wdf]
+KmdfService=WINUSB, WinUsb_Install
+UmdfServiceOrder=WINUSB
+
+[WinUSB_Install]
+KmdfLibraryVersion=1.7
+
+[USB_Install.HW]
+AddReg=Dev_AddReg
+
+[Dev_AddReg]
+HKR,,DeviceInterfaceGUIDs,0x10000,"{7A712B20-A66C-4c6f-AC2C-9ADD913C17C2}"
+
+[USB_Install.CoInstallers]
+AddReg=CoInstallers_AddReg
+CopyFiles=CoInstallers_CopyFiles
+
+[CoInstallers_AddReg]
+HKR,,CoInstallers32,0x00010000,"winusbcoinstaller2.dll","WUDFUpdate_01009.dll","WdfCoInstaller01009.dll,WdfCoInstaller"
+
+[CoInstallers_CopyFiles]
+winusbcoinstaller2.dll
+WdfCoInstaller01009.dll
+WUDFUpdate_01009.dll
+
+[DestinationDirs]
+CoInstallers_CopyFiles=11
+
+; ================= Source Media Section =====================
+
+[SourceDisksNames.x86]
+1 = %DISK_NAME%,,,\i386
+
+[SourceDisksNames.amd64]
+2 = %DISK_NAME%,,,\amd64
+
+[SourceDisksFiles.x86]
+winusbcoinstaller2.dll=1
+WdfCoInstaller01009.dll=1
+WUDFUpdate_01009.dll=1
+
+[SourceDisksFiles.amd64]
+winusbcoinstaller2.dll=2
+WdfCoInstaller01009.dll=2
+WUDFUpdate_01009.dll=2
+
+; Copy Files section
+;------------------------------------------------------------------------------
+[_CopyFiles_sys]
+winusb.sys
+
+;************************************************* *****************************
+; Destination Directories
+;------------------------------------------------------------------------------
+[DestinationDirs]
+DefaultDestDir = 12 ; %SystemRoot%\system32\drivers
+_CopyFiles_sys = 12
+
+; =================== Strings ===================
+
+[Strings]
+ProviderName="Eckler Software"
+USB\MyDevice.DeviceDesc="rt-stepper"
+WinUSB_SvcDesc="rt-stepper"
+DISK_NAME="Install Disk"
+

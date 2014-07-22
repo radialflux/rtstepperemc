@@ -1,0 +1,404 @@
+#
+#  Makefile.in - make input file
+#
+#  (c) 2010-2012 Copyright Eckler Software
+# 
+#  Author: David Suffield, dsuffiel@ecklersoft.com
+#
+
+SHELL = /bin/sh
+VPATH = @srcdir@
+
+subdirs = @subdirs@
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+datarootdir=@datarootdir@
+infodir = @infodir@
+libdir = @libdir@
+docdir = $(datarootdir)/doc/@PACKAGE_NAME@
+mandir = @mandir@
+emcdir = $(datarootdir)/@PACKAGE_NAME@
+emcconfdir = /etc/@PACKAGE_NAME@
+emcrulesdir = /etc/udev/rules.d
+
+CC = @CC@
+CXX = @CXX@
+CXXFLAGS = @CXXFLAGS@
+CFLAGS =  @CFLAGS@ 
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+DEFS = @DEFS@
+INSTALL = @INSTALL@
+VERSION = @PACKAGE_VERSION@
+
+PACKAGE = @PACKAGE_NAME@
+EXEEXT = @EXEEXT@
+INSTALL_DATA = $(INSTALL) -m 644
+INSTALL_PROGRAM = $(INSTALL)
+INSTALL_SCRIPT = $(INSTALL)
+mkinstalldirs = $(INSTALL) -d
+host = @host@
+EPM_PACKAGE = @PACKAGE_NAME@
+
+platform = @platform@
+relnum = @relnum@
+DLL_EXTENSION = @dll_extension@
+mingw_path = @mingw_path@
+mingw_build = @mingw_build@
+mingw_inc_path = @mingw_inc_path@
+mingw_lib_path = @mingw_lib_path@
+mini_build = @mini_build@
+darwin_build = @darwin_build@
+linux_build = @linux_build@
+BUNDLE = tkmini.app
+host_cpu = @host_cpu@
+
+INCLUDES = -Iinclude -Itinypy
+
+CFLAGS += -std=gnu99
+
+ifeq ($(mingw_build),no)
+CFLAGS += -fvisibility=hidden
+CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
+endif
+
+ifeq ($(mingw_build),yes)
+docdir = doc
+emcconfdir = etc
+endif
+
+# Use this conditional for dmg bundles. Remove for source code "make install".
+ifeq ($(darwin_build),yes)
+docdir = doc
+emcconfdir = etc
+endif
+
+ifeq ($(mingw_build),yes)
+ifeq ($(host_cpu),i686)
+win_bin = win32
+endif
+ifeq ($(host_cpu),x86_64)
+win_bin = win64
+endif
+endif
+
+DEFS += -DLINELEN=255 \
+-DEMC2_TASKNAME=\"milltask\" -DEMC2_DEFAULT_INIFILE=\"$(emcconfdir)/rtstepper.ini\" \
+-DEMC2_DEFAULT_PROGRAM_PREFIX=\"$(emcconfdir)\" -DDLL_EXTENSION=\"$(DLL_EXTENSION)\"
+
+dist_doc_DATA = \
+COPYING ers.html dongle.jpg mini_linux.png mini_xp_full.png sig.png input_pins.png mini_osx_full.png bundle.png \
+zip_download.png extract.png wizard1.png wizard2.png wizard3.png unziped.png unpluged.png new_hardware.png \
+new_hardware2.png new_hardware3.png new_hardware4.png new_hardware6.png output_pins.png db25.png stack.png
+
+dist_noinst_BC_SCRIPTS = \
+tinypy/tokenize.py tinypy/encode.py tinypy/parse.py tinypy/py2bc.py
+
+dist_noinst_TINYPY_SCRIPTS = \
+tinypy/boot.py tinypy/build_bc.py $(dist_noinst_BC_SCRIPTS)
+
+dist_TINYPY_SCRIPTS = \
+tinypy/m3.py tinypy/m5.py tinypy/m4.py tinypy/m7.py tinypy/m8.py tinypy/m9.py tinypy/m190.py
+
+dist_noinst_SCRIPTS = \
+bootstrap configure.ac config.guess install-sh configure config.sub create-dmg template.applescript \
+
+dist_noinst_DATA = \
+Makefile.in aclocal.m4 rtstepper.list.in rt-stepper.inf
+
+dist_MINI_SCRIPTS =
+
+dist_noinst_MINI_SCRIPTS = \
+mini/emc.tcl.in mini/mini.tcl.in
+
+dist_CONF_DATA = \
+rtstepper.ini
+
+dist_DATA = \
+55-rt-stepper.rules $(dist_CONF_DATA) 
+
+dist_PROGRAM_SOURCE_INC = \
+include/bug.h include/canon.h \
+include/cubic.h include/emc.h \
+include/emcpos.h include/emctool.h include/tool_parse.h \
+include/interp_internal.h include/interpl.h include/interp_return.h include/kinematics.h \
+include/motion.h \
+include/rs274ngc.h include/rs274ngc_interp.h include/units.h \
+include/tc.h include/tcpmem.h include/tcp_opts.h include/tcp_srv.h \
+include/tp.h include/rs274ngc_return.h include/interp_queue.h \
+include/rtstepper.h include/posemath.h include/emc_msg.h include/linklist.h \
+include/list.h include/msg.h include/ini.h
+
+dist_RS274NGC_SOURCE = \
+rs274ngc/interp_arc.cc rs274ngc/interp_array.cc rs274ngc/interp_check.cc rs274ngc/interp_convert.cc rs274ngc/interp_queue.cc \
+rs274ngc/interp_cycles.cc rs274ngc/interp_execute.cc rs274ngc/interp_find.cc rs274ngc/interp_internal.cc rs274ngc/interp_inverse.cc \
+rs274ngc/interp_read.cc rs274ngc/interp_write.cc rs274ngc/interp_o_word.cc rs274ngc/nurbs_additional_functions.cc \
+rs274ngc/rs274ngc_pre.cc rs274ngc/tool_parse.cc
+
+dist_TASK_SOURCE = \
+task/motctl.c task/motcmd.c \
+task/interpl.cc task/tp.c task/tc.c task/trivkins.c task/cubic.c \
+task/emccanon.cc task/ini.c task/rtstepper.c task/rtstepper_log.c \
+task/iocmd.c task/ui.cc task/cmd.cc task/linklist.cc task/msg.c \
+task/_posemath.c task/posemath.cc task/tclext.cc
+
+_TMP = $(notdir $(dist_noinst_BC_SCRIPTS))
+BC_MODULES = $(_TMP:.py=)
+BC_TPC = $(dist_noinst_BC_SCRIPTS:.py=.tpc)
+
+dist_TINYPY_SOURCE_INC = \
+tinypy/tinypy.h
+
+dist_TINYPY_SOURCE = \
+tinypy/builtins.c tinypy/dict.c tinypy/gc.c tinypy/list.c tinypy/misc.c tinypy/ops.c tinypy/string.c tinypy/tp.c tinypy/vm.c
+
+dist_TINYPY_RTSTEPPER_SOURCE = \
+tinypy/rtstepper/init.c
+
+dist_RTTEST_SOURCE = task/rt-test.c
+dist_PYTEST_SOURCE = task/pytest.c
+
+TINYPY_OBJ = bc.o $(dist_TINYPY_SOURCE:.c=.o) $(dist_TINYPY_RTSTEPPER_SOURCE:.c=.o)
+RS274NGC_OBJ = $(addsuffix .o, $(basename $(dist_RS274NGC_SOURCE)))
+TASK_OBJ = $(addsuffix .o, $(basename $(dist_TASK_SOURCE))) $(RS274NGC_OBJ) $(TINYPY_OBJ)
+RTTEST_OBJ =  $(addsuffix .o, $(basename $(dist_RTTEST_SOURCE)))
+PYTEST_OBJ = $(dist_PYTEST_SOURCE:.c=.o) 
+
+# Default
+all: rtstepperemc.$(DLL_EXTENSION) rt-test$(EXEEXT) rt-pytest$(EXEEXT)
+
+# bc.c (compiled python modules)
+bc.c: $(BC_TPC)
+	rm -f bc.c
+	for i in $(BC_MODULES); do \
+	   python tinypy/build_bc.py $$i; \
+	done
+
+%.tpc: %.py
+	python tinypy/py2bc.py $< $*.tpc
+
+# Link program
+rtstepperemc.so: $(TASK_OBJ)
+	$(CXX) -shared -o $@ $(TASK_OBJ) -L. $(LDFLAGS) $(LIBS) -lusb -lpthread -DUSE_TCL_STUBS -ltcl
+
+rtstepperemc.dylib: $(TASK_OBJ)
+	$(CXX) -shared -o $@ $(TASK_OBJ) -Wl,-headerpad_max_install_names -L. $(LDFLAGS) $(LIBS) -lpthread -DUSE_TCL_STUBS -ltcl -lusb-legacy
+
+rtstepperemc.dll: $(TASK_OBJ)
+	$(CXX) -shared -o $@ $(TASK_OBJ) -L. $(LDFLAGS) $(LIBS) -lusb-winusb -lpthread -DUSE_TCL_STUBS -ltcl.dll -lwsock32
+
+rt-test: $(RTTEST_OBJ)
+ifeq ($(darwin_build),yes)
+	$(CC) -o $@ $(RTTEST_OBJ) -L. $(LDFLAGS) $(LIBS) -lusb-legacy
+else
+	$(CC) -o $@ $(RTTEST_OBJ) -L. $(LDFLAGS) $(LIBS) -lusb
+endif
+
+rt-test.exe: $(RTTEST_OBJ)
+	$(CC) -o $@ $(RTTEST_OBJ) -L. $(LDFLAGS) $(LIBS) -lusb-winusb
+
+rt-pytest: $(PYTEST_OBJ)
+	$(CC) -o $@ $(PYTEST_OBJ) -L. $(LDFLAGS) $(LIBS) -ldl -lpthread
+
+rt-pytest.exe: $(PYTEST_OBJ)
+	$(CC) -o $@ $(PYTEST_OBJ) -L. $(LDFLAGS) $(LIBS) -lpthread
+
+# Compile with pattern rules
+%.o: %.c $(dist_PROGRAM_SOURCE_INC) $(dist_TINYPY_SOURCE_INC)
+	$(CC) -c $< -o $@ $(CFLAGS) $(DEFS) $(INCLUDES) 
+%.o: %.cc $(dist_PROGRAM_SOURCE_INC) $(dist_TINYPY_SOURCE_INC)
+	$(CXX) -c $< -o $@ $(CXXFLAGS) $(DEFS) $(INCLUDES) 
+
+#
+# Install
+#
+install: all install_rtstepperemc.$(DLL_EXTENSION)
+
+# Install programs 
+install_rtstepperemc.so:
+	$(mkinstalldirs) $(DESTDIR)$(emcconfdir)
+	@for i in $(dist_CONF_DATA) $(dist_TINYPY_SCRIPTS); do \
+	   fn=`basename $$i`; \
+	   if [ -f $(DESTDIR)/$(emcconfdir)/$$fn ]; then \
+	      echo "-WARNING existing $(emcconfdir)/$$fn, NO update performed!" ; \
+	   else \
+	      $(INSTALL_DATA) $(srcdir)/$$i $(DESTDIR)$(emcconfdir); \
+	   fi ; \
+	done
+	$(mkinstalldirs) $(DESTDIR)$(emcdir)
+	$(INSTALL) $(srcdir)/rtstepperemc.$(DLL_EXTENSION) $(DESTDIR)$(emcdir)
+	$(mkinstalldirs) $(DESTDIR)$(bindir)
+	$(INSTALL) $(srcdir)/rt-test $(DESTDIR)$(bindir)
+	$(mkinstalldirs) $(DESTDIR)$(docdir)-$(VERSION)
+	@for i in $(dist_doc_DATA); do \
+	   $(INSTALL) $(srcdir)/$$i $(DESTDIR)$(docdir)-$(VERSION); \
+	done
+ifeq ($(linux_build),yes)
+	$(mkinstalldirs) $(DESTDIR)$(emcrulesdir)
+	$(INSTALL_DATA) $(srcdir)/55-rt-stepper.rules $(DESTDIR)$(emcrulesdir)
+endif
+ifeq ($(mini_build),yes)
+	$(mkinstalldirs) $(DESTDIR)$(emcdir)/mini
+	@for i in $(dist_MINI_SCRIPTS); do \
+	   $(INSTALL_SCRIPT) $(srcdir)/$$i $(DESTDIR)$(emcdir)/mini; \
+	done
+	$(INSTALL_SCRIPT) $(srcdir)/mini/mini.tcl $(DESTDIR)$(emcdir)/mini
+	$(INSTALL_SCRIPT) $(srcdir)/mini/emc.tcl $(DESTDIR)$(emcdir)/mini
+	ln -sf ../share/$(PACKAGE)/mini/mini.tcl $(DESTDIR)$(bindir)/tkmini
+endif
+
+install_rtstepperemc.dll:
+
+#
+# Uninstall
+#
+uninstall: uninstall_rtstepperemc.$(DLL_EXTENSION)
+
+# Uninstall program
+uninstall_rtstepperemc.so:
+	rm -fr $(DESTDIR)$(emcconfdir)
+	rm -fr $(DESTDIR)$(emcdir)
+	rm -f $(DESTDIR)$(bindir)/rt-test
+ifeq ($(linux_build),yes)
+	rm -f $(DESTDIR)$(emcrulesdir)/55-rt-stepper.rules
+endif
+ifeq ($(mini_build),yes)
+	rm -f $(DESTDIR)$(bindir)/tkmini
+endif
+
+uninstall_rtstepperemc.dll:
+
+dist:
+	rm -fr $(PACKAGE)-$(VERSION)
+	install -d $(PACKAGE)-$(VERSION)/task
+	install -d $(PACKAGE)-$(VERSION)/rs274ngc
+	install -d $(PACKAGE)-$(VERSION)/include
+	install -d $(PACKAGE)-$(VERSION)/mini
+	install -d $(PACKAGE)-$(VERSION)/tinypy/rtstepper
+	cp $(dist_noinst_SCRIPTS) $(dist_noinst_DATA) $(dist_doc_DATA) $(dist_DATA) $(PACKAGE)-$(VERSION)
+	cp $(dist_TASK_SOURCE) $(dist_RTTEST_SOURCE) $(dist_PYTEST_SOURCE) $(PACKAGE)-$(VERSION)/task
+	cp $(dist_RS274NGC_SOURCE) $(PACKAGE)-$(VERSION)/rs274ngc
+	cp $(dist_MINI_SCRIPTS) $(dist_noinst_MINI_SCRIPTS) $(PACKAGE)-$(VERSION)/mini
+	cp $(dist_PROGRAM_SOURCE_INC) $(PACKAGE)-$(VERSION)/include
+	cp $(dist_TINYPY_SOURCE_INC) $(dist_TINYPY_SOURCE) $(dist_noinst_TINYPY_SCRIPTS) $(dist_TINYPY_SCRIPTS) $(PACKAGE)-$(VERSION)/tinypy
+	cp $(dist_TINYPY_RTSTEPPER_SOURCE) $(PACKAGE)-$(VERSION)/tinypy/rtstepper
+	tar czvf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)
+	rm -r $(PACKAGE)-$(VERSION)
+
+clean:	
+	rm -f task/*.o task/*~ rs274ngc/*.o tinypy/*.o tinypy/rtstepper/*.o \
+	rs274ngc/*~ mini/*~ include/*~ tinypy/*.tpc tinypy/*~ tinypy/rtstepper/*~
+
+rpm:
+	epm -m $(platform) -f rpm $(EPM_PACKAGE) rtstepper.list
+	cd $(platform); md5sum $(EPM_PACKAGE)-$(VERSION)-$(relnum)-$(platform).rpm > $(EPM_PACKAGE)-$(VERSION)-$(relnum)-$(platform).md5
+
+deb:
+	epm -m $(platform) -f deb $(EPM_PACKAGE) rtstepper.list
+	cd $(platform); md5sum $(EPM_PACKAGE)-$(VERSION)-$(relnum)-$(platform).deb > $(EPM_PACKAGE)-$(VERSION)-$(relnum)-$(platform).md5
+
+dmg:
+	rm -fr $(BUNDLE)
+	$(mkinstalldirs) $(BUNDLE)/Contents/MacOS/$(emcconfdir)
+	$(mkinstalldirs) $(BUNDLE)/Contents/MacOS/lib
+	$(mkinstalldirs) $(BUNDLE)/Contents/Resources/$(docdir)
+	$(mkinstalldirs) $(BUNDLE)/Contents/Frameworks
+	@for i in $(dist_CONF_DATA) $(dist_TINYPY_SCRIPTS); do \
+	   $(INSTALL_DATA) $(srcdir)/$$i $(BUNDLE)/Contents/MacOS/$(emcconfdir); \
+	done
+	@for i in $(dist_doc_DATA); do \
+	   $(INSTALL_DATA) $(srcdir)/$$i $(BUNDLE)/Contents/Resources/$(docdir); \
+	done
+	$(INSTALL_SCRIPT) $(srcdir)/mini/mini.tcl $(BUNDLE)/Contents/MacOS/tkmini.tcl
+	$(INSTALL_SCRIPT) $(srcdir)/mini/emc.tcl $(BUNDLE)/Contents/MacOS
+	$(INSTALL_PROGRAM) $(srcdir)/rt-test $(BUNDLE)/Contents/MacOS
+	$(INSTALL_PROGRAM) $(srcdir)/rtstepperemc.dylib $(BUNDLE)/Contents/MacOS/lib
+	$(INSTALL_PROGRAM) $(libdir)/libusb-legacy/libusb-legacy-0.1.4.dylib $(BUNDLE)/Contents/MacOS/lib
+	$(INSTALL_PROGRAM) $(libdir)/libintl.8.dylib $(BUNDLE)/Contents/MacOS/lib
+	$(INSTALL_PROGRAM) $(libdir)/libiconv.2.dylib $(BUNDLE)/Contents/MacOS/lib
+	install_name_tool -id @loader_path/lib/rtstepperemc.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/rtstepperemc.dylib
+	install_name_tool -change $(libdir)/libusb-legacy/libusb-legacy-0.1.4.dylib \
+	   @loader_path/../lib/libusb-legacy-0.1.4.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/rtstepperemc.dylib
+	install_name_tool -change $(libdir)/libintl.8.dylib \
+	   @loader_path/../lib/libintl.8.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/rtstepperemc.dylib
+	install_name_tool -id @loader_path/lib/libusb-legacy-0.1.4.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/libusb-legacy-0.1.4.dylib
+	install_name_tool -id @loader_path/lib/libintl.8.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/libintl.8.dylib
+	install_name_tool -change $(libdir)/libiconv.2.dylib \
+	   @loader_path/../lib/libiconv.2.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/libintl.8.dylib
+	install_name_tool -id @loader_path/lib/libiconv.2.dylib \
+	   $(BUNDLE)/Contents/MacOS/lib/libiconv.2.dylib
+	install_name_tool -change $(libdir)/libusb-legacy/libusb-legacy-0.1.4.dylib \
+	   @loader_path/lib/libusb-legacy-0.1.4.dylib \
+	   $(BUNDLE)/Contents/MacOS/rt-test
+	echo "APPL????" >$(BUNDLE)/Contents/PkgInfo
+	echo \
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
+<plist version=\"1.0\">\n\
+<dict>\n\
+<key>CFBundleExecutable</key>\n\
+<string>tkmini.tcl</string>\n\
+<key>CFBundleIdentifier</key>\n\
+<string>com.ecklersoft.tkmini</string>\n\
+<key>CFBundleName</key>\n\
+<string>tkmini</string>\n\
+<key>CFBundleGetInfoString</key>\n\
+<string>rtstepper tkmini, (c) 2012 Copyright Eckler Software</string>\n\
+<key>CFBundleSignature</key>\n\
+<string>????</string>\n\
+<key>CFBundleShortVersionString</key>\n\
+<string>$(VERSION)</string>\n\
+<key>CFBundleInfoDictionaryVersion</key>\n\
+<string>6.0</string>\n\
+<key>CFBundlePackageType</key>\n\
+<string>APPL</string>\n\
+</dict>\n\
+</plist>\n" > $(BUNDLE)/Contents/Info.plist
+	./create-dmg --window-size 500 380 --volname $(PACKAGE)-$(VERSION) --icon "tkmini" 110 55 --icon "rt-test" 380 55 \
+	  --icon "rtstepper.ini" 380 265 --icon "ers" 110 265 $(PACKAGE)-$(VERSION)-$(relnum)-macosx-10.6-intel.dmg tkmini.app
+
+zip:
+	rm -fr $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)
+	install -d $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/$(emcconfdir)
+	@for i in $(dist_CONF_DATA) $(dist_TINYPY_SCRIPTS); do \
+	   $(INSTALL_DATA) $(srcdir)/$$i $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/$(emcconfdir); \
+	done
+	install -d  $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/$(docdir)-$(VERSION)
+	@for i in $(dist_doc_DATA); do \
+	   $(INSTALL_DATA) $(srcdir)/$$i $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/$(docdir); \
+	done
+	$(INSTALL) $(mingw_path)/pthreadGC2.dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) $(mingw_path)/libgcc_s_sjlj-1.dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) $(mingw_path)/libstdc++-6.dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL_DATA) rt-stepper.inf $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) rt-test.exe $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL_SCRIPT) mini/mini.tcl $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/tkmini.tcl
+	$(INSTALL) rtstepperemc.dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL_SCRIPT) mini/emc.tcl $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	install -d $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/i386
+	$(INSTALL) i386/*dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/i386/
+	install -d $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/amd64
+	$(INSTALL) amd64/*dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/amd64/
+	$(INSTALL) $(mingw_inc_path)/usb-winusb.h $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) $(mingw_path)/wusb-lsusb.exe $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) $(mingw_path)/libusb-winusb.dll $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	$(INSTALL) $(mingw_lib_path)/libusb-winusb.a $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)/
+	zip -r $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum).zip $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)
+	rm -fr $(PACKAGE)_$(win_bin)-$(VERSION)-$(relnum)
+
+test:
+	./rt-pytest
+	./rt-pytest -v
+	./rt-pytest -i rtstepper.ini
+	./rt-pytest -i rtstepper.ini -m m5
+
+.PHONY: dist uninstall install all clean zip test

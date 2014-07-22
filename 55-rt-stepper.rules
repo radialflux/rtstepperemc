@@ -1,0 +1,15 @@
+# rt-stepper usb to parallel port udev rules
+
+ACTION!="add", GOTO="rt_rules_end"
+
+# For Debian based distros use ATTR{} since SYSFS{} is no longer suppported. DES 7/7/2013
+SUBSYSTEM=="usb", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="ff45", MODE="0666"
+
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", SYSFS{idVendor}=="04d8", SYSFS{idProduct}=="ff45", MODE="0666"
+
+SUBSYSTEM=="usb_device", SYSFS{idVendor}=="04d8", SYSFS{idProduct}=="ff45", MODE="0666"
+
+# For /proc/bus/usb/bbb/ddd libusb devices (ie: Ubuntu 5.10 Breezy).
+SUBSYSTEM=="usb", SYSFS{idVendor}=="04d8", SYSFS{idProduct}=="ff45", RUN+="/bin/sh -c 'chmod 666 $env{DEVICE}'"
+
+LABEL="rt_rules_end"
